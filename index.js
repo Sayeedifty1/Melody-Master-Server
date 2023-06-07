@@ -36,6 +36,7 @@ async function run() {
         }));
         const userCollection = client.db("MelodyMaster").collection("user");
         const classCollection = client.db("MelodyMaster").collection("classes");
+        const instructorCollection = client.db("MelodyMaster").collection("instructors");
 
 
         //! users related apis
@@ -63,6 +64,12 @@ async function run() {
             const result = await classCollection.find().toArray();
             res.send(result);
         });
+        // show all the approved classes
+        app.get('/approved-classes', async (req, res) => {
+            const result = await classCollection.find({ status: 'approved' }).toArray();
+            res.send(result);
+        });
+
         // getting the first 6 popular classes sort by number of enrolled students
         app.get('/popular-classes', async (req, res) => {
             try {
@@ -75,7 +82,22 @@ async function run() {
         });
 
 
-
+        // ! instructor related apis
+        // for getting all the instructors
+        app.get('/instructors', async (req, res) => {
+            const result = await instructorCollection.find().toArray();
+            res.send(result);
+        });
+        // getting the first 6 popular classes sort by number of class taken
+        app.get('/popular-instructors', async (req, res) => {
+            try {
+                const popularInstructors = await instructorCollection.find().sort({ numberOfClasses: -1 }).limit(6).toArray();
+                res.send(popularInstructors);
+            } catch (err) {
+                console.error(err);
+                res.status(500).send('Internal server error');
+            }
+        });
 
 
 
