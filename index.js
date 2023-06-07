@@ -35,6 +35,7 @@ async function run() {
             }
         }));
         const userCollection = client.db("MelodyMaster").collection("user");
+        const classCollection = client.db("MelodyMaster").collection("classes");
 
 
         //! users related apis
@@ -42,7 +43,7 @@ async function run() {
             const result = await userCollection.find().toArray();
             res.send(result);
         });
-        //! storing user data in database
+        //storing user data in database
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
@@ -55,6 +56,31 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
+
+        // ! class related apis
+        // for getting all the classes
+        app.get('/classes', async (req, res) => {
+            const result = await classCollection.find().toArray();
+            res.send(result);
+        });
+        // getting the first 6 popular classes sort by number of enrolled students
+        app.get('/popular-classes', async (req, res) => {
+            try {
+                const popularClasses = await classCollection.find().sort({ numberOfStudents: -1 }).limit(6).toArray();
+                res.send(popularClasses);
+            } catch (err) {
+                console.error(err);
+                res.status(500).send('Internal server error');
+            }
+        });
+
+
+
+
+
+
+
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
