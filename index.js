@@ -100,7 +100,22 @@ async function run() {
             const result = await userCollection.updateOne(filter, updateDoc);
             res.send(result);
 
-        })
+        });
+        // setting  a user role to instructor
+        app.patch('/users/instructor/:id', async (req, res) => {
+            const id = req.params.id;
+            console.log(id);
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    role: 'instructor'
+                },
+            };
+
+            const result = await userCollection.updateOne(filter, updateDoc);
+            res.send(result);
+
+        });
 
         // ! class related apis
         // for getting all the classes
@@ -125,7 +140,7 @@ async function run() {
             }
         });
 
-
+        // TODO: change it
         // ! instructor related apis
         // for getting all the instructors
         app.get('/instructors', async (req, res) => {
