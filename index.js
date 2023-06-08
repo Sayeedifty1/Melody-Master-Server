@@ -30,7 +30,7 @@ const verifyJWT = (req, res, next) => {
 }
 
 // ! MongoDB Connection
-const { MongoClient, ServerApiVersion , ObjectId } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.nsyuaxc.mongodb.net/?retryWrites=true&w=majority`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -58,7 +58,7 @@ async function run() {
         const classCollection = client.db("MelodyMaster").collection("classes");
         const instructorCollection = client.db("MelodyMaster").collection("instructors");
 
-       
+
 
         app.post('/jwt', (req, res) => {
             const user = req.body;
@@ -69,7 +69,7 @@ async function run() {
 
 
         //! users related apis
-        app.get('/users',verifyJWT, async (req, res) => {
+        app.get('/users', verifyJWT, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         });
@@ -140,23 +140,102 @@ async function run() {
             }
         });
 
-        // TODO: change it
+
         // ! instructor related apis
         // for getting all the instructors
         app.get('/instructors', async (req, res) => {
-            const result = await instructorCollection.find().toArray();
-            res.send(result);
+            const pipeline = [
+                {
+                    $lookup: {
+                        from: "classes",
+                        localField: "email",
+                        foreignField: "instructorEmail",
+                        as: "classes",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        name: 1,
+                        email: 1,
+                        photoURL: 1,
+                        numberOfClasses: {
+                            $cond: {
+                                if: { $isArray: "$classes" },
+                                then: { $size: "$classes" },
+                                else: 0,
+                            },
+                        },
+                        classes: {
+                            $cond: {
+                                if: { $isArray: "$classes" },
+                                then: "$classes.name",
+                                else: [],
+                            },
+                        },
+                    },
+                },
+            ];
+
+            const instructors = await userCollection.aggregate(pipeline).toArray();
+            res.send(instructors);
         });
+
+
+
         // getting the first 6 popular classes sort by number of class taken
-        app.get('/popular-instructors', async (req, res) => {
-            try {
-                const popularInstructors = await instructorCollection.find().sort({ numberOfClasses: -1 }).limit(6).toArray();
-                res.send(popularInstructors);
-            } catch (err) {
-                console.error(err);
-                res.status(500).send('Internal server error');
-            }
+        app.get('/instructors/popular', async (req, res) => {
+            const pipeline = [
+                {
+                    $lookup: {
+                        from: "classes",
+                        localField: "email",
+                        foreignField: "instructorEmail",
+                        as: "classes",
+                    },
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        name: 1,
+                        photoURL: 1,
+                        numberOfStudents: {
+                            $cond: {
+                                if: { $isArray: "$classes" },
+                                then: { $sum: "$classes.numberOfStudents" },
+                                else: 0,
+                            },
+                        },
+                        numberOfClasses: {
+                            $cond: {
+                                if: { $isArray: "$classes" },
+                                then: { $size: "$classes" },
+                                else: 0,
+                            },
+                        },
+                        classes: {
+                            $cond: {
+                                if: { $isArray: "$classes" },
+                                then: { $arrayElemAt: ["$classes.name", 0] },
+                                else: "",
+                            },
+                        },
+                    },
+                },
+                { $sort: { numberOfStudents: -1 } },
+                { $limit: 6 },
+            ];
+
+            const instructors = await userCollection.aggregate(pipeline).toArray();
+            res.send(instructors);
         });
+
+
+
+
+
+
+
 
 
 
