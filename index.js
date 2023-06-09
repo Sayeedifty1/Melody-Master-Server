@@ -86,6 +86,13 @@ async function run() {
             const result = await userCollection.insertOne(user);
             res.send(result);
         });
+        // get users by email
+        app.get('/users/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const result = await userCollection.findOne(query);
+            res.send(result);
+        });
         // setting  a user role to admin
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
@@ -135,6 +142,7 @@ async function run() {
             res.send(result);
         });
 
+        
         // getting the first 6 popular classes sort by number of enrolled students
         app.get('/popular-classes', async (req, res) => {
             try {
