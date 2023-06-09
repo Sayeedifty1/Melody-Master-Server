@@ -146,6 +146,13 @@ async function run() {
             }
         });
 
+        // get classes according to the instructor email
+        app.get('/classes/:email', async (req, res) => {
+            const email = req.params.email; 
+            const result = await classCollection.find({ instructorEmail: email }).toArray();
+            res.send(result);
+        });
+
 
         // ! instructor related apis
         // for getting all the instructors
