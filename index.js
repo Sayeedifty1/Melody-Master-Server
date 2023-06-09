@@ -123,6 +123,12 @@ async function run() {
             const result = await classCollection.find().toArray();
             res.send(result);
         });
+        // posting new class
+        app.post('/classes', async (req, res) => {
+            const classData = req.body;
+            const result = await classCollection.insertOne(classData);
+            res.send(result);
+        });
         // show all the approved classes
         app.get('/approved-classes', async (req, res) => {
             const result = await classCollection.find({ status: 'approved' }).toArray();
