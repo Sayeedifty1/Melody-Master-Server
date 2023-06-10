@@ -56,7 +56,7 @@ async function run() {
         }));
         const userCollection = client.db("MelodyMaster").collection("user");
         const classCollection = client.db("MelodyMaster").collection("classes");
-        const instructorCollection = client.db("MelodyMaster").collection("instructors");
+        const selectedCollection = client.db("MelodyMaster").collection("selected");
 
 
 
@@ -197,6 +197,15 @@ async function run() {
             res.send(result);
         });
 
+        // ! selected classes related apis
+        // post selected class to database
+        app.post('/classes/selected', async (req, res) => {
+            const selectedClass = req.body;
+            const result = await selectedCollection.insertOne(selectedClass);
+            res.send(result);
+        });
+    
+            
 
 
         // ! instructor related apis
