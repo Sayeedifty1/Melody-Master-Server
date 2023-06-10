@@ -5,6 +5,7 @@ require('dotenv').config();
 
 const jwt = require('jsonwebtoken');
 const port = process.env.PORT || 5000;
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY);
 
 // ! Middleware
 app.use(cors());
@@ -57,6 +58,7 @@ async function run() {
         const userCollection = client.db("MelodyMaster").collection("user");
         const classCollection = client.db("MelodyMaster").collection("classes");
         const selectedCollection = client.db("MelodyMaster").collection("selected");
+        const enrolledCollection = client.db("MelodyMaster").collection("enrolled");
 
 
 
@@ -155,7 +157,7 @@ async function run() {
 
         // get classes according to the instructor email
         app.get('/classes/:email', async (req, res) => {
-            const email = req.params.email; 
+            const email = req.params.email;
             const result = await classCollection.find({ instructorEmail: email }).toArray();
             res.send(result);
         });
@@ -228,11 +230,11 @@ async function run() {
         });
 
 
-     
 
 
-    
-            
+
+
+
 
 
         // ! instructor related apis
@@ -323,6 +325,46 @@ async function run() {
             const instructors = await userCollection.aggregate(pipeline).toArray();
             res.send(instructors);
         });
+
+        //! create payment intent
+        app.post('/create-payment-intent', async (req, res) => {
+            const { price } = req.body;
+
+            const amount = parseInt(price * 100);
+            console.log(price, amount)
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: "usd",
+                payment_method_types: ["card"],
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret,
+            });
+
+        });
+        // to store payment info in enrolled and deleting the existing class from selected
+        app.post('/enrolled', async (req, res) => {
+            try {
+                const payment = req.body;
+                const result = await enrolledCollection.insertOne(payment);
+
+                // Delete the paid class data from the selected collection
+                const { enrolledClass } = payment;
+                const query = { _id: new ObjectId(enrolledClass._id) };
+                const deleteResult = await selectedCollection.deleteOne(query);
+
+                // Update the available seats in the classes collection
+                const classQuery = { _id: new ObjectId(enrolledClass.classId) };
+                const classUpdate = { $inc: { availableSeats: -1 } };
+                const classUpdateResult = await classCollection.updateOne(classQuery, classUpdate);
+
+                res.send({ paymentResult: result, deleteResult, classUpdateResult });
+            } catch (error) {
+                console.error('Error saving payment and deleting class data:', error);
+                res.status(500).send('Failed to save payment and delete class data');
+            }
+        });
+
 
 
 
