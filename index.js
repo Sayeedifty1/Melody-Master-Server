@@ -95,6 +95,21 @@ async function run() {
             const result = await userCollection.findOne(query);
             res.send(result);
         });
+        // get admin users by email
+        app.get('/users/admin/:email',  async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                res.send({ admin: false })
+            }
+
+            const query = { email: email }
+            const user = await userCollection.findOne(query);
+            const result = { admin: user?.role === 'admin' }
+            res.send(result);
+        })
+
+
         // setting  a user role to admin
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
