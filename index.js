@@ -69,14 +69,35 @@ async function run() {
             res.send({ token })
         });
 
+        // Warning: use verifyJWT before using verifyAdmin from db
+        const verifyAdmin = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email }
+            const user = await userCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+            }
+            next();
+        }
+        // Warning: use verifyJWT before using verifyInstructor from db
+        const verifyInstructor = async (req, res, next) => {
+            const email = req.decoded.email;
+            const query = { email: email }
+            const user = await userCollection.findOne(query);
+            if (user?.role !== 'admin') {
+                return res.status(403).send({ error: true, message: 'forbidden message' });
+            }
+            next();
+        }
+
 
         //! users related apis
-        app.get('/users', verifyJWT, async (req, res) => {
+        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         });
         //storing user data in database
-        app.post('/users', async (req, res) => {
+        app.post('/users',verifyJWT, verifyAdmin, async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
             const existingUser = await userCollection.findOne(query);
@@ -96,7 +117,7 @@ async function run() {
             res.send(result);
         });
         // get admin users by email
-        app.get('/users/admin/:email',  async (req, res) => {
+        app.get('/users/admin/:email', verifyJWT,verifyAdmin, async (req, res) => {
             const email = req.params.email;
 
             if (req.decoded.email !== email) {
@@ -108,10 +129,23 @@ async function run() {
             const result = { admin: user?.role === 'admin' }
             res.send(result);
         })
+        // get Instructor users by email
+        app.get('/users/instructor/:email', verifyJWT,verifyAdmin, async (req, res) => {
+            const email = req.params.email;
+
+            if (req.decoded.email !== email) {
+                res.send({ admin: false })
+            }
+
+            const query = { email: email }
+            const user = await userCollection.findOne(query);
+            const result = { admin: user?.role === 'instructor' }
+            res.send(result);
+        })
 
 
         // setting  a user role to admin
-        app.patch('/users/admin/:id', async (req, res) => {
+        app.patch('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             console.log(id);
             const filter = { _id: new ObjectId(id) };
@@ -126,7 +160,7 @@ async function run() {
 
         });
         // setting  a user role to instructor
-        app.patch('/users/instructor/:id', async (req, res) => {
+        app.patch('/users/instructor/:id',verifyJWT, async (req, res) => {
             const id = req.params.id;
             console.log(id);
             const filter = { _id: new ObjectId(id) };
@@ -143,12 +177,12 @@ async function run() {
 
         // ! class related apis
         // for getting all the classes
-        app.get('/classes', async (req, res) => {
+        app.get('/classes',verifyJWT, verifyAdmin, async (req, res) => {
             const result = await classCollection.find().toArray();
             res.send(result);
         });
         // posting new class
-        app.post('/classes', async (req, res) => {
+        app.post('/classes',verifyJWT,verifyInstructor, async (req, res) => {
             const classData = req.body;
             const result = await classCollection.insertOne(classData);
             res.send(result);
@@ -171,13 +205,13 @@ async function run() {
         });
 
         // get classes according to the instructor email
-        app.get('/classes/:email', async (req, res) => {
+        app.get('/classes/:email',verifyJWT,verifyInstructor, async (req, res) => {
             const email = req.params.email;
             const result = await classCollection.find({ instructorEmail: email }).toArray();
             res.send(result);
         });
         // changing class  to approved put method
-        app.put('/classes/approved/:id', async (req, res) => {
+        app.put('/classes/approved/:id',verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
@@ -189,7 +223,7 @@ async function run() {
             res.send(result);
         });
         // changing class to deny , put method
-        app.put('/classes/denied/:id', async (req, res) => {
+        app.put('/classes/denied/:id',verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
             const updateDoc = {
@@ -201,7 +235,7 @@ async function run() {
             res.send(result);
         });
         // inserting feedback to a class
-        app.put('/classes/feedback/:id', async (req, res) => {
+        app.put('/classes/feedback/:id',verifyJWT, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const feedback = req.body;
             const filter = { _id: new ObjectId(id) };
@@ -216,20 +250,20 @@ async function run() {
 
         // ! selected classes related apis
         // post selected class to database
-        app.post('/classes/selected', async (req, res) => {
+        app.post('/classes/selected',verifyJWT, async (req, res) => {
             const selectedClass = req.body;
             const result = await selectedCollection.insertOne(selectedClass);
             res.send(result);
         });
         // get selected class by email
-        app.get('/classes/selected/:email', async (req, res) => {
+        app.get('/classes/selected/:email',verifyJWT, async (req, res) => {
             const email = req.params.email;
             const query = { userEmail: email }
             const result = await selectedCollection.find(query).toArray();
             res.send(result);
         });
         // get selected class by id
-        app.get('/classes/get/:id', async (req, res) => {
+        app.get('/classes/get/:id',verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await selectedCollection.findOne(query);
@@ -237,7 +271,7 @@ async function run() {
         });
 
         // deleting a selected class by id
-        app.delete('/classes/selected/:id', async (req, res) => {
+        app.delete('/classes/selected/:id',verifyJWT, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await selectedCollection.deleteOne(query);
@@ -342,7 +376,7 @@ async function run() {
         });
 
         //! create payment intent
-        app.post('/create-payment-intent', async (req, res) => {
+        app.post('/create-payment-intent',verifyJWT, async (req, res) => {
             const { price } = req.body;
 
             const amount = parseInt(price * 100);
@@ -358,7 +392,7 @@ async function run() {
 
         });
         // to store payment info in enrolled and deleting the existing class from selected
-        app.post('/enrolled', async (req, res) => {
+        app.post('/enrolled',verifyJWT, async (req, res) => {
             try {
                 const payment = req.body;
                 const result = await enrolledCollection.insertOne(payment);
