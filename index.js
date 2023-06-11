@@ -84,7 +84,7 @@ async function run() {
             const email = req.decoded.email;
             const query = { email: email }
             const user = await userCollection.findOne(query);
-            if (user?.role !== 'admin') {
+            if (user?.role !== 'instructor') {
                 return res.status(403).send({ error: true, message: 'forbidden message' });
             }
             next();
@@ -130,7 +130,7 @@ async function run() {
             res.send(result);
         })
         // get Instructor users by email
-        app.get('/users/instructor/:email', verifyJWT,verifyAdmin, async (req, res) => {
+        app.get('/users/instructor/:email', verifyJWT,verifyInstructor, async (req, res) => {
             const email = req.params.email;
 
             if (req.decoded.email !== email) {
@@ -145,7 +145,7 @@ async function run() {
 
 
         // setting  a user role to admin
-        app.patch('/users/admin/:id', verifyJWT, verifyAdmin, async (req, res) => {
+        app.patch('/users/admin/:id',  async (req, res) => {
             const id = req.params.id;
             console.log(id);
             const filter = { _id: new ObjectId(id) };
@@ -160,7 +160,7 @@ async function run() {
 
         });
         // setting  a user role to instructor
-        app.patch('/users/instructor/:id',verifyJWT, async (req, res) => {
+        app.patch('/users/instructor/:id', async (req, res) => {
             const id = req.params.id;
             console.log(id);
             const filter = { _id: new ObjectId(id) };
@@ -182,7 +182,7 @@ async function run() {
             res.send(result);
         });
         // posting new class
-        app.post('/classes',verifyJWT,verifyInstructor, async (req, res) => {
+        app.post('/classes', async (req, res) => {
             const classData = req.body;
             const result = await classCollection.insertOne(classData);
             res.send(result);
@@ -250,7 +250,7 @@ async function run() {
 
         // ! selected classes related apis
         // post selected class to database
-        app.post('/classes/selected',verifyJWT, async (req, res) => {
+        app.post('/classes/selected', async (req, res) => {
             const selectedClass = req.body;
             const result = await selectedCollection.insertOne(selectedClass);
             res.send(result);
@@ -263,7 +263,7 @@ async function run() {
             res.send(result);
         });
         // get selected class by id
-        app.get('/classes/get/:id',verifyJWT, async (req, res) => {
+        app.get('/classes/get/:id',async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await selectedCollection.findOne(query);
