@@ -92,12 +92,12 @@ async function run() {
 
 
         //! users related apis
-        app.get('/users', verifyJWT, verifyAdmin, async (req, res) => {
+        app.get('/users',  async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         });
         //storing user data in database
-        app.post('/users',verifyJWT, verifyAdmin, async (req, res) => {
+        app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
             const existingUser = await userCollection.findOne(query);
@@ -412,6 +412,13 @@ async function run() {
                 console.error('Error saving payment and deleting class data:', error);
                 res.status(500).send('Failed to save payment and delete class data');
             }
+        });
+        // getting enrolled class by email
+        app.get('/enrolled/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { email: email }
+            const result = await enrolledCollection.find(query).toArray();
+            res.send(result);
         });
 
 
